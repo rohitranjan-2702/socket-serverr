@@ -1,4 +1,3 @@
-const app = require("express")();
 const server = require("http").createServer();
 
 require("dotenv").config();
@@ -10,10 +9,6 @@ const io = require("socket.io")(server, {
 });
 
 const port = process.env.PORT || 5000;
-
-app.get("/", (req, res) => {
-  res.send("hello!!!!");
-});
 
 io.on("connection", async (socket) => {
   let studentId;
