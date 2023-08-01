@@ -1,12 +1,53 @@
-const http = require('http');
-const PORT = 3000;
+const app = require("express")();
+const server = require("http").createServer();
 
-const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('Hello World!');
+require("dotenv").config();
+
+const io = require("socket.io")(server, {
+  cors: {
+    origin: "*",
+  },
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}/`);
+const port = process.env.PORT || 5000;
+
+app.get("/", (req, res) => {
+  res.send("hello!!!!");
+});
+
+io.on("connection", async (socket) => {
+  let studentId;
+  let question;
+  let teacherId;
+  let tutorsVisited;
+
+  //if conn with a student socket
+  socket.on("studentConnected", (payload) => {
+    studentId = payload.studentId;
+    socket.join(studentId);
+  });
+  socket.on("questionAsked", (payload) => {
+    question = payload.question;
+    studentId = payload.studentId;
+    console.log(`question asked by ${studentId}: ${question}`);
+    socket.to("tutors").emit("questionAvailable", { studentId, question });
+  });
+
+  //if conn with a teacher socket
+  socket.on("teacherOnline", (payload) => {
+    teacherId = payload.teacherId;
+    socket.join(teacherId);
+    socket.join("tutors");
+  });
+  socket.on("questionAccepted", (payload) => {
+    studentId = payload.studentId;
+    teacherId = payload.teacherId;
+    io.to("tutors").emit("removeQuestion", { studentId });
+    io.to(studentId).to(teacherId).emit("moveToCall", { studentId, teacherId });
+    // socket.to(teacherId).emit("moveToCall", { studentId, teacherId });
+  });
+});
+
+server.listen(port, () => {
+  console.log(`server active at ${port}...`);
 });
